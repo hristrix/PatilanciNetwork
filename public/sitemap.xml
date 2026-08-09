@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder sitemap. Regenerate with real lastmod dates before launch. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://patilanci.gg/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://patilanci.gg/about</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://patilanci.gg/creators</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://patilanci.gg/events</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://patilanci.gg/podcast</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://patilanci.gg/contact</loc>
+    <priority>0.6</priority>
+  </url>
+</urlset>
