@@ -208,3 +208,27 @@ test('Pages Function fails clearly when its secret is missing and does not inter
     service: 'Patilanci downloads',
   });
 });
+
+
+test('API failures report safe diagnostics without exposing credentials or upstream bodies', async () => {
+  for (const failure of [401, 403, 429, 500, 'network', 'invalid-json']) {
+    const service = createDownloadService({
+      apiKey: 'secret-fixture-key',
+      publicBaseUrl: 'https://patilanci.net/launcher',
+      fetchUpstream: async () => {
+        if (failure === 'network') throw new Error('secret-fixture-key');
+        return new Response('secret-fixture-key', {
+          status: failure === 'invalid-json' ? 200 : failure,
+        });
+      },
+    });
+    const response = await service(new Request(
+      'https://patilanci.net/launcher/v1/mods/1746375/files?pageSize=1',
+    ));
+    assert.equal(response.status, 502);
+    const body = await response.json();
+    assert.equal(body.upstreamStatus, failure === 'network' ? null : failure === 'invalid-json' ? 200 : failure);
+    assert.equal(body.code, failure === 'network' ? 'CURSEFORGE_CONNECTION_FAILED' : failure === 'invalid-json' ? 'CURSEFORGE_INVALID_RESPONSE' : 'CURSEFORGE_HTTP_ERROR');
+    assert.doesNotMatch(JSON.stringify(body), /secret-fixture-key/);
+  }
+});
