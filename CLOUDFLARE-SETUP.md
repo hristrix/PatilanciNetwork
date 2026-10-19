@@ -7,7 +7,7 @@ The existing coming-soon page remains the home page. A Pages Function serves onl
 1. Open Workers & Pages and select the existing Pages project serving `patilanci.net`.
 2. Under Settings > Variables and Secrets, add an encrypted secret named `PATILANCI_CURSEFORGE_KEY` with your existing working CurseForge API key. Set it for Production. Configure Preview separately only if you want preview deployments to access downloads. Never put the key in HTML, Git, or a public variable.
 3. Set the build command to `npm run build` and the build output directory to `dist`. Keep the existing production branch and repository root directory. The build copies the original index, assets, and resource-pack ZIPs into the public output; source, tests, and secrets remain outside it.
-4. This project now has a `wrangler.jsonc` using compatibility date `2026-10-18`. No Cloudflare project name is hardcoded; keep the existing Git integration, or supply the actual project name for CLI deployment. The Function uses standard Fetch/Streams APIs and does not need a running Node HTTP server.
+4. This project has a `wrangler.jsonc` using compatibility date `2026-10-18` and the required top-level `"name": "patilancinetwork"`, matching the existing Pages project. Keep this name in the website repository's root Wrangler file for both Git integration and CLI deployment; the npm package name does not set the Pages project name. The Function uses standard Fetch/Streams APIs and does not need a running Node HTTP server.
 5. Commit and push these local site changes through your existing Git integration. Deploy Functions via Git integration or Wrangler, rather than dragging a static folder into the dashboard. Do not configure Pages to fail open to static assets for Function errors.
 6. After deployment, verify:
    - `https://patilanci.net/` still shows the coming-soon page.
@@ -15,7 +15,7 @@ The existing coming-soon page remains the home page. A Pages Function serves onl
    - `https://patilanci.net/launcher/v1/mods/1746375/files?pageSize=1` returns CurseForge metadata with same-domain proxy download URLs. This tests real API access, which the health route alone does not do.
 7. In the **launcher** GitHub repository, set the Actions variable `PUBLIC_DOWNLOAD_SERVICE_URL` to `https://patilanci.net/launcher`. The local launcher configuration uses this same URL. Windows signing remains a separate requirement for production installers.
 
-If you deploy by CLI instead of Git integration, use `npm ci`, `npm run build`, then `npx wrangler pages deploy dist --project-name YOUR_EXISTING_PROJECT_NAME`. This publishes externally; run it only when you intend to deploy.
+If you deploy by CLI instead of Git integration, use `npm ci`, `npm run build`, then `npx wrangler pages deploy dist --project-name patilancinetwork`. This publishes externally; run it only when you intend to deploy.
 
 ## Local checks
 
