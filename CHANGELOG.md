@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 - 2026-10-19
+
+- The launcher file-list endpoint now returns only the newest published client pack, including newer beta or alpha releases and excluding server packs. Older releases are not offered.
+
 ## 1.0.2 - 2026-10-19
 
 - Fixed launcher metadata requests failing before reaching CurseForge because of an unsupported Cloudflare redirect mode. API redirects remain blocked.

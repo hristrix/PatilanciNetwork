@@ -7,6 +7,59 @@ import {
 } from '../lib/download-service.mjs';
 import { onRequest } from '../functions/launcher/[[path]].js';
 
+test('only the latest client is returned across unordered pages, with no fallback', async () => {
+  const files = Array.from({ length: 51 }, (_, i) => ({
+    id: i + 1,
+    fileDate: '2026-10-01',
+    releaseType: 1,
+  }));
+  files.push({ id: 100, fileDate: '2026-10-18', releaseType: 3 });
+  files.push({
+    id: 200,
+    fileDate: '2026-10-19',
+    releaseType: 1,
+    isServerPack: true,
+  });
+  let unavailable = false;
+  const service = createDownloadService({
+    apiKey: 'fixture-key',
+    publicBaseUrl: 'https://patilanci.net/launcher',
+    fetchUpstream: async (url) => {
+      const params = new URL(url).searchParams;
+      const index = Number(params.get('index'));
+      const size = Number(params.get('pageSize'));
+      const data = files.slice(index, index + size).map((file) => ({
+        ...file,
+        isAvailable: file.id === 100 ? !unavailable : true,
+      }));
+      return Response.json({
+        data,
+        pagination: {
+          index,
+          resultCount: data.length,
+          totalCount: files.length,
+        },
+      });
+    },
+  });
+  const base = 'https://patilanci.net/launcher/v1/mods/1746375/files';
+  for (const query of ['?index=0&pageSize=1', '?pageSize=50', '']) {
+    const response = await service(new Request(base + query));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(
+      body.data.map((file) => file.id),
+      [100],
+    );
+    assert.equal(body.pagination.totalCount, 1);
+    assert.equal(body.pagination.resultCount, 1);
+  }
+  const next = await service(new Request(base + '?index=1&pageSize=1'));
+  assert.deepEqual((await next.json()).data, []);
+  unavailable = true;
+  assert.equal((await service(new Request(base + '?pageSize=1'))).status, 502);
+});
+
 function fixture() {
   const calls = [];
   let unsafe = false;
@@ -209,7 +262,6 @@ test('Pages Function fails clearly when its secret is missing and does not inter
   });
 });
 
-
 test('API failures report safe diagnostics without exposing credentials or upstream bodies', async () => {
   for (const failure of [401, 403, 429, 500, 'network', 'invalid-json']) {
     const service = createDownloadService({
@@ -222,17 +274,28 @@ test('API failures report safe diagnostics without exposing credentials or upstr
         });
       },
     });
-    const response = await service(new Request(
-      'https://patilanci.net/launcher/v1/mods/1746375/files?pageSize=1',
-    ));
+    const response = await service(
+      new Request(
+        'https://patilanci.net/launcher/v1/mods/1746375/files?pageSize=1',
+      ),
+    );
     assert.equal(response.status, 502);
     const body = await response.json();
-    assert.equal(body.upstreamStatus, failure === 'network' ? null : failure === 'invalid-json' ? 200 : failure);
-    assert.equal(body.code, failure === 'network' ? 'CURSEFORGE_CONNECTION_FAILED' : failure === 'invalid-json' ? 'CURSEFORGE_INVALID_RESPONSE' : 'CURSEFORGE_HTTP_ERROR');
+    assert.equal(
+      body.upstreamStatus,
+      failure === 'network' ? null : failure === 'invalid-json' ? 200 : failure,
+    );
+    assert.equal(
+      body.code,
+      failure === 'network'
+        ? 'CURSEFORGE_CONNECTION_FAILED'
+        : failure === 'invalid-json'
+          ? 'CURSEFORGE_INVALID_RESPONSE'
+          : 'CURSEFORGE_HTTP_ERROR',
+    );
     assert.doesNotMatch(JSON.stringify(body), /secret-fixture-key/);
   }
 });
-
 
 test('API redirects are rejected without forwarding the server credential', async () => {
   let calls = 0;
@@ -241,13 +304,19 @@ test('API redirects are rejected without forwarding the server credential', asyn
     publicBaseUrl: 'https://patilanci.net/launcher',
     fetchUpstream: async (url, options) => {
       calls++;
-      if (options.redirect === 'error') throw new TypeError('Unsupported redirect mode');
+      if (options.redirect === 'error')
+        throw new TypeError('Unsupported redirect mode');
       const upstream = new Request(url, options);
       assert.equal(upstream.redirect, 'manual');
-      return new Response(null, {status: 302, headers: {Location: 'https://evil.example/key'}});
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://evil.example/key' },
+      });
     },
   });
-  const response = await service(new Request('https://patilanci.net/launcher/v1/mods/1746375/files'));
+  const response = await service(
+    new Request('https://patilanci.net/launcher/v1/mods/1746375/files'),
+  );
   assert.equal(response.status, 502);
   const body = await response.json();
   assert.equal(body.upstreamStatus, 302);
