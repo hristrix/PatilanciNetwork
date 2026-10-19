@@ -232,3 +232,25 @@ test('API failures report safe diagnostics without exposing credentials or upstr
     assert.doesNotMatch(JSON.stringify(body), /secret-fixture-key/);
   }
 });
+
+
+test('API redirects are rejected without forwarding the server credential', async () => {
+  let calls = 0;
+  const service = createDownloadService({
+    apiKey: 'secret-fixture-key',
+    publicBaseUrl: 'https://patilanci.net/launcher',
+    fetchUpstream: async (url, options) => {
+      calls++;
+      if (options.redirect === 'error') throw new TypeError('Unsupported redirect mode');
+      const upstream = new Request(url, options);
+      assert.equal(upstream.redirect, 'manual');
+      return new Response(null, {status: 302, headers: {Location: 'https://evil.example/key'}});
+    },
+  });
+  const response = await service(new Request('https://patilanci.net/launcher/v1/mods/1746375/files'));
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.equal(body.upstreamStatus, 302);
+  assert.equal(calls, 1);
+  assert.doesNotMatch(JSON.stringify(body), /secret-fixture-key|evil.example/);
+});
